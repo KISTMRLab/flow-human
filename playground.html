@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flow Human — research reimplementation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">PUBLIC RESEARCH REIMPLEMENTATION</p><h1>Flow Human</h1></div>
+    <div class="toolbar">
+      <button id="add-dialogue">+ Dialogue</button><button id="add-feedback">+ Feedback</button>
+      <button id="validate">Validate</button><button id="export">Export</button><label class="button">Import<input id="import" type="file" accept="application/json"></label>
+    </div>
+  </header>
+  <main>
+    <section class="authoring panel">
+      <div class="section-title"><div><span>01</span><h2>Conversation flow</h2></div><label>Start <select id="start-node"></select></label></div>
+      <div id="canvas-wrap"><svg id="edges" aria-hidden="true"></svg><div id="canvas"></div></div>
+      <div id="validation" role="status"></div>
+    </section>
+    <aside class="preview panel">
+      <div class="section-title"><div><span>02</span><h2>Runtime preview</h2></div><button id="run">Run flow</button></div>
+      <div id="stage">
+        <div id="avatar" data-gesture="idle"><div class="head"><i class="eye left"></i><i class="eye right"></i><i class="mouth"></i></div><div class="torso"><i class="arm left"></i><i class="arm right"></i></div></div>
+        <div id="speech">Build a flow, choose a start node, then run it.</div>
+      </div>
+      <form id="feedback-form" hidden><div id="feedback-fields"></div><button type="submit">Continue</button></form>
+      <div class="runtime-row"><label><input id="voice" type="checkbox" checked> browser voice</label><button id="advance" disabled>Next</button></div>
+      <details><summary>Session state and events</summary><pre id="session-log">{}</pre></details>
+    </aside>
+  </main>
+  <footer>The preview is schematic. Exported JSON and emitted events are the portable integration boundary.</footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
+

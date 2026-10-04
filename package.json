@@ -1,0 +1,11 @@
+{
+  "name": "flow-human-reimplementation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node --test core.test.mjs",
+    "check": "node --check app.js && node --check core.js"
+  },
+  "engines": { "node": ">=20" }
+}

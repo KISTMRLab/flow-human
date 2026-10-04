@@ -1,0 +1,7 @@
+node_modules/
+flow-human.json
+outputs/
+*.egg-info/
+.pytest_cache/
+build/
+dist/

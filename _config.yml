@@ -1,0 +1,17 @@
+title: "Flow Human"
+description: "No-code conversation flows coordinate digital-human behavior."
+markdown: kramdown
+kramdown:
+  input: GFM
+exclude:
+  - src
+  - tests
+  - .venv
+  - data
+  - runs
+  - outputs
+  - checkpoints
+  - pyproject.toml
+  - requirements.txt
+  - package.json
+  - package-lock.json

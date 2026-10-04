@@ -1,0 +1,10 @@
+// Portable adapter for the automatic text-to-gesture component used by Flow Human.
+export const exampleMap={rules:[{phrase:'welcome hello glad meet',gesture:'welcome'},{phrase:'look point here there',gesture:'point'},{phrase:'think consider question explain',gesture:'thinking'},{phrase:'help information tell',gesture:'open_hand'}]};
+function terms(text){return text.toLowerCase().match(/[\p{L}\p{N}']+/gu)||[];}
+function vector(text,vectors){let out=null;for(const term of terms(text)){const v=vectors[term];if(!v)continue;if(!out)out=Array(v.length).fill(0);if(v.length!==out.length)throw new Error('Inconsistent embedding widths.');v.forEach((x,i)=>out[i]+=x);}return out;}
+function cosine(a,b){if(!a||!b||a.length!==b.length)return 0;const n=Math.hypot(...a)*Math.hypot(...b);return n?a.reduce((s,x,i)=>s+x*b[i],0)/n:0;}
+export function validateMap(map){if(!Array.isArray(map.rules)||!map.rules.length)throw new Error('Gesture map needs a nonempty rules array.');for(const r of map.rules)if(typeof r.phrase!=='string'||typeof r.gesture!=='string')throw new Error('Each rule needs phrase and gesture strings.');if(map.vectors){const widths=new Set();for(const v of Object.values(map.vectors)){if(!Array.isArray(v)||!v.length||v.some(x=>!Number.isFinite(x)))throw new Error('Embeddings must be finite numeric arrays.');widths.add(v.length);}if(widths.size>1)throw new Error('Embedding widths must agree.');}return map;}
+export function retrieveGesture(text,map){validateMap(map);const words=terms(text),q=map.vectors?vector(text,map.vectors):null;let best=null,score=0;
+ for(const r of map.rules){let s;if(map.vectors)s=cosine(q,vector(r.phrase,map.vectors));else{const candidate=new Set(terms(r.phrase)),query=new Set(words);s=[...query].filter(t=>candidate.has(t)).length/Math.sqrt(Math.max(1,candidate.size*query.size));}if(s>score){score=s;best=r;}}
+ return {gesture:best?.gesture||'open_hand',score,phrase:best?.phrase||null,frames:best?.frames||null,fps:best?.fps||30,edges:best?.edges||[],backend:map.vectors?'summed-word-vector-cosine':'lexical-example-baseline'};
+}

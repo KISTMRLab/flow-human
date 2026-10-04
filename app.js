@@ -1,3 +1,6 @@
+import {createStage} from "./static/avatar.js";
+import {Speech} from "./static/speech.js";
+import {exampleMap,retrieveGesture,validateMap} from "./gesture-map.js";
 import { behaviorEvents, createSession, evaluateBranch, validateFlow } from "./core.js";
 
 import { demo } from "./demo-flow.js";
@@ -7,6 +10,9 @@ let session = null;
 const byId = (id) => document.getElementById(id);
 const canvas = byId("canvas");
 const edges = byId("edges");
+const stage=createStage(byId("three-stage")),speech=new Speech(stage);
+let gestureMap=structuredClone(exampleMap),clip=null,clipStarted=0;
+function playback(t){if(clip?.frames?.length){const frame=clip.frames[Math.floor((t-clipStarted)/1000*clip.fps)%clip.frames.length];stage.setSkeleton(frame,clip.edges);}requestAnimationFrame(playback);}requestAnimationFrame(playback);
 
 function nodeOptions(selected = "") {
   return `<option value="">End flow</option>${flow.nodes.map((n) => `<option value="${n.id}" ${n.id === selected ? "selected" : ""}>${n.id}</option>`).join("")}`;
@@ -23,7 +29,7 @@ function render() {
     element.innerHTML = `<div class="node-head"><span>${node.type.toUpperCase()} · ${node.id}</span><button class="delete" type="button">×</button></div>
       <div class="node-body">
         <label>Spoken text<textarea data-field="text">${node.text || ""}</textarea></label>
-        <label>Gesture<select data-field="gesture"><option>open_hand</option><option ${node.gesture === "welcome" ? "selected" : ""}>welcome</option><option ${node.gesture === "point" ? "selected" : ""}>point</option><option ${node.gesture === "thinking" ? "selected" : ""}>thinking</option></select></label>
+        <label>Gesture<select data-field="gesture"><option value="auto" ${!node.gesture||node.gesture==='auto'?'selected':''}>Automatic retrieval</option><option ${node.gesture==='open_hand'?'selected':''}>open_hand</option><option ${node.gesture === "welcome" ? "selected" : ""}>welcome</option><option ${node.gesture === "point" ? "selected" : ""}>point</option><option ${node.gesture === "thinking" ? "selected" : ""}>thinking</option></select></label>
         ${node.type === "feedback" ? feedbackEditor(node) : ""}
         <label>Default next<select data-field="next">${nodeOptions(node.next)}</select></label>
       </div>`;
@@ -73,17 +79,21 @@ function addNode(type) {
 }
 
 function logSession() { byId("session-log").textContent = JSON.stringify(session, null, 2); }
-function speak(text) { if (byId("voice").checked && "speechSynthesis" in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } }
+function speak(text) { if(byId("voice").checked)speech.speak(text,{backend:byId("speech-backend").value}).catch(e=>byId("speech-status").textContent=e.message); }
 
 function showCurrent() {
-  if (!session?.currentId) { session.complete = true; byId("speech").textContent = "Flow complete."; byId("advance").disabled = true; byId("feedback-form").hidden = true; logSession(); return; }
+  if (!session?.currentId) { session.complete = true; speech.cancel();stage.gesture("idle");clip=null; byId("speech").textContent = "Flow complete."; byId("advance").disabled = true; byId("feedback-form").hidden = true; logSession(); return; }
   const node = flow.nodes.find((item) => item.id === session.currentId);
   if (!node) return;
-  const events = behaviorEvents(node.text, node.gesture);
+  const match=retrieveGesture(node.text,gestureMap);
+  const selected=!node.gesture||node.gesture==='auto'?match.gesture:node.gesture;
+  const events = behaviorEvents(node.text, selected);
+  session.events.push({type:"gesture_retrieval",...match,nodeId:node.id});
+  clip=(!node.gesture||node.gesture==='auto')&&match.frames?match:null;clipStarted=performance.now();
+  if(!clip){stage.showAvatar();stage.gesture(selected);}
   session.events.push(...events.map((event) => ({ ...event, nodeId: node.id, emittedAt: new Date().toISOString() })));
   session.transcript.push({ speaker: "digital_human", text: node.text, nodeId: node.id });
   byId("speech").textContent = node.text; byId("avatar").dataset.gesture = node.gesture || "open_hand"; speak(node.text);
-  for (const event of events.filter((event) => event.type === "viseme")) setTimeout(() => { const mouth = document.querySelector(".mouth"); mouth.classList.toggle("open", event.value === "open"); }, event.atMs);
   const form = byId("feedback-form"); form.hidden = node.type !== "feedback"; byId("advance").disabled = node.type === "feedback";
   if (node.type === "feedback") renderFeedback(node); else byId("advance").onclick = () => { session.currentId = node.next || null; showCurrent(); };
   logSession();
@@ -102,5 +112,9 @@ byId("start-node").onchange = (event) => { flow.startId = event.target.value; };
 byId("validate").onclick = () => { const errors = validateFlow(flow); const box = byId("validation"); box.className = errors.length ? "" : "ok"; box.innerHTML = errors.length ? errors.map((e) => `• ${e}`).join("<br>") : "Flow is structurally valid."; };
 byId("run").onclick = () => { const errors = validateFlow(flow); if (errors.length) { byId("validate").click(); return; } session = createSession(flow); showCurrent(); };
 byId("export").onclick = () => { const blob = new Blob([JSON.stringify(flow, null, 2)], { type: "application/json" }); const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "flow-human.json" }); link.click(); URL.revokeObjectURL(link.href); };
-byId("import").onchange = async (event) => { flow = JSON.parse(await event.target.files[0].text()); render(); };
+byId("import").onchange = async (event) => { try { const candidate=JSON.parse(await event.target.files[0].text());const errors=validateFlow(candidate);if(errors.length)throw new Error(errors.join('; '));flow=candidate;session=null;speech.cancel();clip=null;render(); }catch(error){byId("validation").textContent=error.message;} };
 render();
+
+byId("gesture-map").onchange=async e=>{try{gestureMap=validateMap(JSON.parse(await e.target.files[0].text()));byId("speech-status").textContent=`Loaded ${gestureMap.rules.length} gesture rules.`;}catch(error){byId("speech-status").textContent=error.message;}};
+byId("audio-file").onchange=async e=>{try{const result=await speech.transcribe(e.target.files[0]);const input=byId("feedback-fields").querySelector("input,textarea");if(input)input.value=result.text;byId("speech-status").textContent=result.text;}catch(error){byId("speech-status").textContent=error.message;}};
+window.addEventListener("pagehide",()=>{speech.cancel();stage.dispose();});

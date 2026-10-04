@@ -3,9 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "smoke": "node scripts/smoke.mjs",
-    "test": "node --test core.test.mjs",
-    "check": "node --check app.js && node --check core.js"
+    "verify": "node scripts/verify.mjs",
+    "test": "node --test core.test.mjs gesture-map.test.mjs",
+    "check": "node --check app.js && node --check core.js && node --check gesture-map.js",
+    "demo": "python scripts/demo.py"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

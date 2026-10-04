@@ -23,15 +23,15 @@
     <aside class="preview panel">
       <div class="section-title"><div><span>02</span><h2>Runtime preview</h2></div><button id="run">Run flow</button></div>
       <div id="stage">
-        <div id="avatar" data-gesture="idle"><div class="head"><i class="eye left"></i><i class="eye right"></i><i class="mouth"></i></div><div class="torso"><i class="arm left"></i><i class="arm right"></i></div></div>
+        <div id="three-stage" style="width:100%;height:370px"></div><div hidden id="avatar" data-gesture="idle"><div class="head"><i class="eye left"></i><i class="eye right"></i><i class="mouth"></i></div><div class="torso"><i class="arm left"></i><i class="arm right"></i></div></div>
         <div id="speech">Build a flow, choose a start node, then run it.</div>
       </div>
       <form id="feedback-form" hidden><div id="feedback-fields"></div><button type="submit">Continue</button></form>
       <div class="runtime-row"><label><input id="voice" type="checkbox" checked> browser voice</label><button id="advance" disabled>Next</button></div>
-      <details><summary>Session state and events</summary><pre id="session-log">{}</pre></details>
+      <div class="runtime-row"><label>Gesture rules <input id="gesture-map" type="file" accept="application/json"></label><select id="speech-backend" aria-label="Speech backend"><option value="browser">Browser speech</option><option value="kokoro">Local Kokoro</option></select></div><div class="runtime-row"><label>Transcribe feedback <input id="audio-file" type="file" accept="audio/*"></label><span id="speech-status" role="status"></span></div><details><summary>Session state and events</summary><pre id="session-log">{}</pre></details>
     </aside>
   </main>
-  <footer>The preview is schematic. Exported JSON and emitted events are the portable integration boundary.</footer>
+  <footer>Original procedural 3D character. Gesture retrieval, exported flow JSON and behavior events are inspectable integration boundaries.</footer>
   <script type="module" src="app.js"></script>
 </body>
 </html>

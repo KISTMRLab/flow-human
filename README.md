@@ -58,38 +58,36 @@ This standalone browser project reimplements the central ideas from **“No-code
 
 The institute's original implementation is unavailable. This is a new, portable implementation of the paper's flow authoring, conversational behavior coordination, branching feedback, and runtime state. It does not contain the original Unity project, character/voice library, 2,035 gesture clips, learned gesture matcher, kiosk deployment, service data, or study results.
 
-### Run
+### Interactive quickstart
 
-Start with the synthetic conversation using Node.js 20 or newer; no npm dependencies or model downloads are required:
+Prepare the local Three.js viewer and launch the flow editor from this repository root. No npm dependencies or model downloads are required:
+
+```powershell
+python scripts/prepare_viewer.py
+python scripts/demo.py --port 8020
+```
+
+Open http://127.0.0.1:8020. The authored example is ready to run. Edit dialogue and feedback nodes, inspect branches and behavior, then export or import a flow.
+
+### Verify the included example
+
+With Node.js 20 or newer:
 
 ```bash
-npm run smoke
+npm run verify
 npm test
 npm run check
 ```
 
-The smoke run executes the same flow validation, branching and behavior coordination used by the browser. It writes `outputs/smoke/flow.json` and `session.json`, with a completed conversation and speech/gesture/viseme events. Import the generated flow into the browser to edit it.
+The verify run executes the same flow validation, branching and behavior coordination used by the browser. It writes `outputs/verify/flow.json` and `session.json`, with a completed conversation and speech/gesture/viseme events. Import the generated flow into the browser to edit it.
 
 To swap in your own content, export a flow from the editor and supply a JSON object mapping feedback node IDs to answers. The runtime and output event format stay the same:
 
 ```bash
-node scripts/smoke.mjs --flow path/to/flow.json --answers path/to/answers.json --output outputs/my-flow
+node scripts/verify.mjs --flow path/to/flow.json --answers path/to/answers.json --output outputs/my-flow
 ```
 
-No package installation or build is required. Python is only used to serve ES modules locally:
-
-```powershell
-python -m http.server 8080
-```
-
-Open [http://localhost:8080/playground.html](http://localhost:8080/playground.html). Add dialogue and feedback nodes, drag them on the canvas, choose their outgoing targets and conditions, select the start node, validate, and run. Export produces portable JSON; import restores it.
-
-For source verification with Node.js 20 or newer:
-
-```powershell
-npm test
-npm run check
-```
+The browser demo uses a small local Python server for ES modules and optional speech routes. Export produces portable JSON; import restores it.
 
 ### What the runtime does
 
@@ -100,3 +98,13 @@ The built-in figure is deliberately schematic. It previews idle blinking, mouth 
 ### Flow format
 
 Flows are versioned JSON with `startId` and a `nodes` array. A node contains `id`, `type`, `text`, `gesture`, canvas coordinates, an optional default `next`, and, for feedback, `feedbackType`, `prompt`, `options`, and ordered `branches`. Content authors own and review their scripts and collected-feedback policy. No customer responses leave the browser in this implementation.
+
+Automatic gesture selection uses an explicit lexical example map by default. Import a real rule map to use summed GloVe vectors and retrieved motion clips, rather than treating manually selected gesture names as a trained model. Original procedural Three.js geometry replaces the institute’s Unity avatar; no avatar or animation assets are bundled.
+
+### Paper component: automatic gesture rules
+
+Flow Human explicitly modifies the [Automatic Text-to-Gesture](https://github.com/ghazanPK/automatic-text-to-gesture) rule-map method (paper section 2.2). Prepare/export that component’s rules as `{ "rules": [{ "phrase": "...", "gesture": "...", "frames": [[[0,1,0]]], "fps": 30, "edges": [] }], "vectors": { "word": [0.1,0.2] } }`. `frames`, `fps`, `edges` and `vectors` are optional. With supplied vectors the browser performs summed-word-vector cosine retrieval; without them it labels the lexical baseline. This is a file-based integration, so the repo remains standalone.
+
+### Optional speech
+
+Browser speech is the immediate fallback. Install `pip install kokoro soundfile faster-whisper` for local speech; prepare Kokoro phonemizer dependencies from https://github.com/hexgrad/kokoro. Set `KOKORO_MODEL_DIR` to locally downloaded Kokoro-82M `config.json`, `kokoro-v1_0.pth` and `voices/af_heart.pt`, and `WHISPER_MODEL_DIR` to a converted faster-whisper small folder containing `model.bin`. Restart the server, choose Local Kokoro, or upload audio for feedback transcription. Models are downloaded by the user and stay outside Git. Speech and the phoneme approximation are disclosed engineering substitutions.

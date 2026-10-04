@@ -5,3 +5,7 @@ outputs/
 .pytest_cache/
 build/
 dist/
+
+static/vendor/
+models/
+data/

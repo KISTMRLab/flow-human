@@ -13,7 +13,7 @@ function option(name, fallback) {
 }
 const input = option("--flow", null);
 const answersFile = option("--answers", null);
-const output = option("--output", "outputs/smoke");
+const output = option("--output", "outputs/verify");
 const flow = input ? JSON.parse(await readFile(input, "utf8")) : structuredClone(demo);
 const answers = answersFile ? JSON.parse(await readFile(answersFile, "utf8")) : { rating: "5" };
 assert.deepEqual(validateFlow(flow), [], "Invalid flow");

@@ -28,3 +28,7 @@ This browser application reproduces Flow Human's authoring/runtime ideas without
 ## Gesture component handoff
 
 The paper modifies the authors' automatic text-to-gesture rule map. This implementation imports its independent repository's exported phrase/gesture map, optional finite equal-width word vectors and motion frames. With vectors, summed-vector cosine selects the phrase; without them, the UI labels the authored lexical baseline. Manual node gestures override retrieval. The same branching/session code drives speech, pose playback and feedback. Local Kokoro/faster-whisper are replaceable optional adapters, not the paper's original services. Tests must cover synonym retrieval and invalid vector widths in addition to graph/branching behavior.
+
+## Bundled fictional avatar substitution
+
+Two newly generated fictional CC0 humanoids replace the original avatar assets in the browser demo. They provide a 53-bone rig and named ARKit/viseme targets. Motion retargeting adapts source joints to their bind pose; speaking envelopes approximate mouth motion rather than phoneme alignment. The optional recorded BEAT companion inspects public motion, face and audio files prepared locally, independently of the paper's learned algorithm. No dataset recordings or trained weights are bundled.

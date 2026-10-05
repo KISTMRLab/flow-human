@@ -40,7 +40,7 @@ System and use-case demonstration in a two-page poster
 
 ## Explore the implementation
 
-A browser node editor with branching feedback, graph validation, session state, speech/gesture/viseme events and a schematic character preview.
+A browser node editor with dialogue lists, weighted and branching feedback, port-based edges, graph validation, feedback export, speech/gesture/viseme events and a 3D character preview.
 
 This repository contains independently written research code. The institute's original source, datasets and trained models are not distributed. Public-data preparation, commands, assumptions and checks are documented below and in [REQUIREMENTS.md](REQUIREMENTS.md).
 
@@ -82,14 +82,14 @@ The institute's original implementation is unavailable. This is a new, portable 
 
 ### Interactive quickstart
 
-Prepare the local Three.js viewer and launch the flow editor from this repository root. No npm dependencies or model downloads are required:
+Prepare the local Three.js viewer and launch the flow editor from this repository root. `prepare_viewer.py` downloads the pinned Three.js 0.170.0 modules from jsDelivr into ignored `static/vendor/`; the editor itself needs only the Python standard library:
 
 ```powershell
 python scripts/prepare_viewer.py
 python scripts/demo.py --port 8020
 ```
 
-Open http://127.0.0.1:8020. The authored example is ready to run. Edit dialogue and feedback nodes, inspect branches and behavior, then export or import a flow.
+Open http://127.0.0.1:8020. The authored example is ready to run. Edit dialogue and feedback nodes, inspect branches and behavior, then export or import a flow. Without numpy or a prepared BEAT bank, automatic gestures report that recorded motion is unavailable and speech still plays. To enable recorded co-speech motion, run `python -m pip install -r scripts/requirements-demo.txt` and `python scripts/prepare_beat_demo.py` once. The second command downloads one small official BEAT sample.
 
 ### Verify the included example
 
@@ -101,7 +101,16 @@ npm test
 npm run check
 ```
 
-The verify run executes the same flow validation, branching and behavior coordination used by the browser. It writes `outputs/verify/flow.json` and `session.json`, with a completed conversation and speech/gesture/viseme events. Import the generated flow into the browser to edit it.
+The verify run executes the same flow validation, weighted feedback, branching and behavior coordination used by the browser. It writes `outputs/verify/flow.json`, `session.json` and `session.csv`, with a completed conversation, accumulated variables and speech/gesture/viseme events. Import the generated flow into the browser to edit it.
+
+The Python side (gesture-rule matching and the demo server) has its own checks:
+
+```bash
+python -m pytest tests
+python scripts/verify.py            # add --sbert-model PATH to check Sentence-BERT matching
+```
+
+`scripts/verify.py` writes `outputs/verify/gesture-match.json`.
 
 To swap in your own content, export a flow from the editor and supply a JSON object mapping feedback node IDs to answers. The runtime and output event format stay the same:
 
@@ -113,19 +122,48 @@ The browser demo uses a small local Python server for ES modules and optional sp
 
 ### What the runtime does
 
-Each run creates session state with the current node, collected answers, variables, transcript, and a timestamped event history. Dialogue nodes emit `dialogue`, `gesture`, and deterministic text-timed `viseme` events. Feedback nodes render choice, 1–5 number, or text controls. Ordered branch rules (`=`, `≥`, `≤`, or contains) choose the next node; the default edge is used when none match.
+Each run creates session state with the current node, collected answers, accumulated variables, transcript, and a timestamped event history.
 
-The browser uses bundled fictional CC0 avatars, approximate mouth cues, and locally retrieved BEAT body-motion clips during speech. A production renderer can consume the same event log to drive a licensed avatar and phoneme-aligned lip synchronization. Browser voices and the simple viseme heuristic are not replicas of the paper's Naver TTS and animation pipeline.
+- **Chat nodes** hold a dialogue list. They speak every line in order, or one random variant when the node's mode is random. Each line gets its own gesture retrieval and emits `dialogue`, `gesture` and `viseme` events.
+- **Feedback nodes** render choice, 1–5 number, or text controls.
+  - **Weighted values (paper section 2.3).** Choice options carry weights (`Product details=2, Opening hours=1`). A number answer contributes its value times the node's optional `weight`. Contributions accumulate into `session.variables[variable]`, which defaults to `score`.
+- **Branches.** Ordered branch rules (`=`, `≥`, `≤`, or contains) test either the current answer or an accumulated variable. The default edge is used when none match. `=` compares numerically when both sides are numbers (`4` equals `4.0`), otherwise as case-insensitive text.
+- **Edges.** In the editor, drag from a node's output port (the dot beside **Default next** or a branch row) onto another node to connect it. Drop on empty canvas to disconnect. The dropdowns remain available.
+- **Saving and export.** The browser saves the flow and the latest session in `localStorage`; **Reset example** clears them. **Answers JSON** and **Answers CSV** download the session for post-analysis: answers, variables, transcript and events. CSV cells that look like spreadsheet formulas are prefixed with `'`.
+
+The browser uses bundled fictional CC0 avatars and locally retrieved BEAT body-motion clips during speech. Playback goes through the shared renderer's speech path with lip sync enabled, and idle behavior stays on. Where the shared renderer provides them, mouths follow text-derived phoneme visemes and the avatar blinks and idles independently of the flow. Older renderer copies fall back to an amplitude mouth envelope. Browser voices and text-derived visemes are not replicas of the paper's text-to-speech service and its 7-mouth-form lip motion from generated audio. Voice choice per digital human is not implemented; the browser or local Kokoro voice is used.
 
 ### Flow format
 
-Flows are versioned JSON with `startId` and a `nodes` array. A node contains `id`, `type`, `text`, `gesture`, canvas coordinates, an optional default `next`, and, for feedback, `feedbackType`, `prompt`, `options`, and ordered `branches`. Content authors own and review their scripts and collected-feedback policy. No customer responses leave the browser in this implementation.
+Flows are versioned JSON with `startId` and a `nodes` array.
 
-The flow editor retains its explicit lexical example map and manual node gestures. In the browser demo, automatic dialogue gestures retrieve locally prepared BEAT frames through the vendored rule-map adapter; manually selected node gestures override retrieval. Rowan and Mira are bundled fictional CC0 avatars rather than the institute’s Unity character or animation library.
+- **Every node:** `id`, `type`, `text`, an optional `dialogue` list with `dialogueMode` (`sequence` or `random`), `gesture` (`auto` or a named pose), canvas coordinates and an optional default `next`.
+- **Feedback nodes add:** `feedbackType`, `prompt`, `options`, `variable`, an optional numeric `weight`, and ordered `branches`.
+- **Branch entries:** `{operator, value, target}`. Add `source: "variable"` and `variable` to test an accumulated value.
+
+Flows with only `text` remain valid. Content authors own and review their scripts and collected-feedback policy. No customer responses leave the browser unless the user downloads them.
+
+Manually selected node gestures override retrieval. Automatic gestures use either the locally prepared BEAT clips (vendored rule-map adapter) or an imported rule map; see below. Rowan and Mira are bundled fictional CC0 avatars rather than the institute’s Unity character or animation library.
 
 ### Paper component: automatic gesture rules
 
-Flow Human explicitly modifies the [Automatic Text-to-Gesture](https://github.com/ghazanPK/automatic-text-to-gesture) rule-map method (paper section 2.2). Prepare/export that component’s rules as `{ "rules": [{ "phrase": "...", "gesture": "...", "frames": [[[0,1,0]]], "fps": 30, "edges": [] }], "vectors": { "word": [0.1,0.2] } }`. `frames`, `fps`, `edges` and `vectors` are optional. With supplied vectors the browser performs summed-word-vector cosine retrieval; without them it labels the lexical baseline. The browser quickstart also prepares a small official BEAT sample and fits the vendored automatic adapter locally. Export/import of external phrase maps remains available for other motion libraries; the repository runs standalone.
+Flow Human explicitly modifies the [Automatic Text-to-Gesture](https://github.com/ghazanPK/automatic-text-to-gesture) rule-map method (paper section 2.2). Prepare/export that component’s rules in this shape:
+
+```json
+{"jointNames": ["Hips", "Neck"], "fps": 30, "floor": 0.45,
+ "rules": [{"phrase": "...", "gesture": "...", "frames": [[[0, 1, 0], [0, 1.5, 0]]]}],
+ "vectors": {"word": [0.1, 0.2]}}
+```
+
+`frames` (`[frame][joint][x,y,z]` positions named by `jointNames`), `fps`, `floor` and `vectors` are optional. Importing a map under **Import rule map** switches **Automatic gestures** to the map.
+
+- **Matching.** A map that supplies its own word `vectors` matches in the browser by summed-vector cosine. Otherwise the server matches each dialogue line.
+  - **Sentence-BERT**, as in the paper, needs a locally saved sentence-transformers model: `pip install sentence-transformers`, then `python scripts/demo.py --sbert-model path/to/all-MiniLM-L6-v2` or set `FLOW_SBERT_MODEL`. The model loads offline from that folder and is never downloaded implicitly. To fetch one once, run `SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2").save("models/all-MiniLM-L6-v2")`; `models/` is git-ignored.
+  - **TF-IDF** over the rule phrases is used when no model is configured.
+- **Similarity floor.** Scores below the floor return `idle`, not the nearest rule. Defaults: SBERT 0.45, TF-IDF 0.2, browser word vectors 0.5, browser lexical fallback 0.15.
+- **Playback.** A matched rule with `frames` plays those frames on the avatar at its `fps`. A matched rule without frames plays its named pose.
+
+The BEAT route remains the default. The browser quickstart prepares a small official BEAT sample and fits the vendored automatic adapter locally, and the repository runs standalone. Not reproduced: the paper's 2,035-gesture library.
 
 ### Optional speech
 

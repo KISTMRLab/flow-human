@@ -4,3 +4,5 @@
 .speech-tools, .runtime-controls {flex-wrap:wrap;min-width:0} #speech-backend {max-width:100%} label:has(#gesture-map),label:has(#audio-file){min-width:0;flex-wrap:wrap} input[type=file]{max-width:100%}
 
 .runtime-row{flex-wrap:wrap;gap:8px}.runtime-row>*{min-width:0;max-width:100%}.runtime-row input[type=file]{width:100%}.runtime-row #speech-status{flex:1 1 100%;overflow-wrap:anywhere}
+.port{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid var(--teal);background:#fff;z-index:3;touch-action:none}.port.out{right:-18px;top:50%;transform:translateY(-50%);cursor:crosshair;background:var(--teal)}.port.out:hover{box-shadow:0 0 0 4px #28786f33}.port.in{left:-8px;top:9px}.port-row{position:relative}.node-body .branch{grid-template-columns:62px 40px 1fr 1fr 22px}.edge.conditional{stroke:var(--accent);stroke-dasharray:5 3}.edge.pending{stroke:var(--accent);stroke-width:2.5;stroke-dasharray:4 4}.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}#variables{font:12px monospace;color:var(--teal)}
+#edges{overflow:visible}

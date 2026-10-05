@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Flow Human — research reimplementation</title>
-  <link rel="stylesheet" href="style.css?v=20261005-beat2">
+  <link rel="stylesheet" href="style.css?v=20261006-pf">
 </head>
 <body>
   <header>
     <div><p class="eyebrow">PUBLIC RESEARCH REIMPLEMENTATION</p><h1>Flow Human</h1></div>
     <div class="toolbar">
       <button id="add-dialogue">+ Dialogue</button><button id="add-feedback">+ Feedback</button>
-      <button id="validate">Validate</button><button id="export">Export</button><label class="button">Import<input id="import" type="file" accept="application/json"></label>
+      <button id="validate">Validate</button><button id="export">Export flow</button><button id="reset-example" type="button" title="Clear the flow and session saved in this browser">Reset example</button><label class="button">Import<input id="import" type="file" accept="application/json"></label>
     </div>
   </header>
   <main>
@@ -28,11 +28,11 @@
       </div>
       <form id="feedback-form" hidden><div id="feedback-fields"></div><button type="submit">Continue</button></form>
       <div class="runtime-row"><label><input id="voice" type="checkbox" checked> browser voice</label><button id="advance" disabled>Next</button></div>
-      <div class="runtime-row"><label>Gesture rules <input id="gesture-map" type="file" accept="application/json"></label><select id="speech-backend" aria-label="Speech backend"><option value="browser">Browser speech</option><option value="kokoro">Local Kokoro</option></select></div><div class="runtime-row"><label>Transcribe feedback <input id="audio-file" type="file" accept="audio/*"></label><span id="speech-status" role="status"></span></div><details><summary>Session state and events</summary><pre id="session-log">{}</pre></details>
+      <div class="runtime-row" id="variables" aria-live="polite"></div><div class="runtime-row"><span>Feedback export</span><button id="download-json" type="button" disabled>Answers JSON</button><button id="download-csv" type="button" disabled>Answers CSV</button></div><div class="runtime-row"><label>Automatic gestures <select id="gesture-source"><option value="beat">Recorded BEAT clips (automatic rule map)</option><option value="map">Rule map</option></select></label><label>Import rule map <input id="gesture-map" type="file" accept="application/json"></label><select id="speech-backend" aria-label="Speech backend"><option value="browser">Browser speech</option><option value="kokoro">Local Kokoro</option></select></div><div class="runtime-row"><label>Transcribe feedback <input id="audio-file" type="file" accept="audio/*"></label><span id="speech-status" role="status"></span></div><details><summary>Session state and events</summary><pre id="session-log">{}</pre></details>
     </aside>
   </main>
   <footer>Bundled fictional CC0 3D character. Gesture retrieval, exported flow JSON and behavior events are inspectable integration boundaries.</footer>
-  <script type="module" src="app.js?v=20261005-beat2"></script>
+  <script type="module" src="app.js?v=20261006-pf"></script>
 </body>
 </html>
 

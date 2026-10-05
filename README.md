@@ -60,12 +60,15 @@ Please cite the research paper when using its ideas; [download the BibTeX citati
 From the repository root, using the Python environment described below:
 
 ```sh
+python -m pip install -r scripts/requirements-demo.txt
 python scripts/start_demo.py
 ```
 
-Open **http://127.0.0.1:8080/**. Click **Run flow**, then **Next** or **Continue** to follow the bundled dialogue and feedback branches. The launcher selects the bundled inputs automatically; it also builds the small authored index for RAG demos. Avatar demos prepare their pinned Three.js modules on first launch, so that step needs internet access. Model weights and public datasets are optional for the starter workflow and are prepared separately for real-data use.
+Open **http://127.0.0.1:8080/**. Click **Run flow**, then **Next** or **Continue** to follow the bundled dialogue and feedback branches. The launcher prepares pinned Three.js modules and downloads one small official BEAT BVH/TextGrid sample on first run. It builds a nine-clip local bank and fits the Automatic Text-to-Gesture rule-map adapter under ignored `outputs/beat-library/`; later runs reuse the cache. The first run needs internet access. Original recordings, large datasets, institute assets, and pretrained gesture weights are not distributed.
 
 The 3D presentation uses shared Three.js avatar components and bundled fictional CC0 characters. The paper-specific algorithms and data adapters live in this repository.
+
+The application uses `automatic` retrieval for recorded co-speech motion: the automatic rule-map lineage described in section 2.2 of the Flow Human paper. The flow editor, branch execution, feedback, and event history remain this application's core. The BEAT preparation and retrieval dependencies are vendored in this repository, so no sibling repository checkout is needed. See `scripts/prepare_beat_demo.py` to rebuild the ignored local bank.
 
 <!-- demo-preview:end -->
 
@@ -112,17 +115,17 @@ The browser demo uses a small local Python server for ES modules and optional sp
 
 Each run creates session state with the current node, collected answers, variables, transcript, and a timestamped event history. Dialogue nodes emit `dialogue`, `gesture`, and deterministic text-timed `viseme` events. Feedback nodes render choice, 1–5 number, or text controls. Ordered branch rules (`=`, `≥`, `≤`, or contains) choose the next node; the default edge is used when none match.
 
-The built-in figure is deliberately schematic. It previews idle blinking, mouth cues, gesture names, and optional browser speech synthesis. A production renderer can consume the same event log to drive a licensed avatar, phoneme-aligned lip synchronization, and a gesture system. Browser voices and the simple viseme heuristic are not replicas of the paper's Naver TTS and animation pipeline.
+The browser uses bundled fictional CC0 avatars, approximate mouth cues, and locally retrieved BEAT body-motion clips during speech. A production renderer can consume the same event log to drive a licensed avatar and phoneme-aligned lip synchronization. Browser voices and the simple viseme heuristic are not replicas of the paper's Naver TTS and animation pipeline.
 
 ### Flow format
 
 Flows are versioned JSON with `startId` and a `nodes` array. A node contains `id`, `type`, `text`, `gesture`, canvas coordinates, an optional default `next`, and, for feedback, `feedbackType`, `prompt`, `options`, and ordered `branches`. Content authors own and review their scripts and collected-feedback policy. No customer responses leave the browser in this implementation.
 
-Automatic gesture selection uses an explicit lexical example map by default. Import a real rule map to use summed GloVe vectors and retrieved motion clips, rather than treating manually selected gesture names as a trained model. Original procedural Three.js geometry replaces the institute’s Unity avatar; no avatar or animation assets are bundled.
+The flow editor retains its explicit lexical example map and manual node gestures. In the browser demo, automatic dialogue gestures retrieve locally prepared BEAT frames through the vendored rule-map adapter; manually selected node gestures override retrieval. Rowan and Mira are bundled fictional CC0 avatars rather than the institute’s Unity character or animation library.
 
 ### Paper component: automatic gesture rules
 
-Flow Human explicitly modifies the [Automatic Text-to-Gesture](https://github.com/ghazanPK/automatic-text-to-gesture) rule-map method (paper section 2.2). Prepare/export that component’s rules as `{ "rules": [{ "phrase": "...", "gesture": "...", "frames": [[[0,1,0]]], "fps": 30, "edges": [] }], "vectors": { "word": [0.1,0.2] } }`. `frames`, `fps`, `edges` and `vectors` are optional. With supplied vectors the browser performs summed-word-vector cosine retrieval; without them it labels the lexical baseline. This is a file-based integration, so the repo remains standalone.
+Flow Human explicitly modifies the [Automatic Text-to-Gesture](https://github.com/ghazanPK/automatic-text-to-gesture) rule-map method (paper section 2.2). Prepare/export that component’s rules as `{ "rules": [{ "phrase": "...", "gesture": "...", "frames": [[[0,1,0]]], "fps": 30, "edges": [] }], "vectors": { "word": [0.1,0.2] } }`. `frames`, `fps`, `edges` and `vectors` are optional. With supplied vectors the browser performs summed-word-vector cosine retrieval; without them it labels the lexical baseline. The browser quickstart also prepares a small official BEAT sample and fits the vendored automatic adapter locally. Export/import of external phrase maps remains available for other motion libraries; the repository runs standalone.
 
 ### Optional speech
 

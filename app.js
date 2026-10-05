@@ -1,5 +1,6 @@
-import {createStage} from "./static/avatar.js?v=20261005-gesture7";
-import {Speech} from "./static/speech.js?v=20261005-gesture7";
+import {createStage} from "./static/avatar.js?v=20261005-beat2";
+import {Speech} from "./static/speech.js?v=20261005-beat2";
+import {prepareApplicationMotion,gestureSummary} from "./static/application-gesture.js?v=20261005-beat2";
 import {exampleMap,retrieveGesture,validateMap} from "./gesture-map.js";
 import { behaviorEvents, createSession, evaluateBranch, validateFlow } from "./core.js";
 
@@ -11,8 +12,7 @@ const byId = (id) => document.getElementById(id);
 const canvas = byId("canvas");
 const edges = byId("edges");
 const stage=createStage(byId("three-stage")),speech=new Speech(stage);
-let gestureMap=structuredClone(exampleMap),clip=null,clipStarted=0;
-function playback(t){if(clip?.frames?.length){const frame=clip.frames[Math.floor((t-clipStarted)/1000*clip.fps)%clip.frames.length];if(stage.setPosePositions(frame,clip.jointNames,stage.avatar,{axisSigns:clip.axisSigns})){stage.showAvatar();}else stage.setSkeleton(frame,clip.edges);}requestAnimationFrame(playback);}requestAnimationFrame(playback);
+let gestureMap=structuredClone(exampleMap),activeMotion=null,showGeneration=0;
 
 function nodeOptions(selected = "") {
   return `<option value="">End flow</option>${flow.nodes.map((n) => `<option value="${n.id}" ${n.id === selected ? "selected" : ""}>${n.id}</option>`).join("")}`;
@@ -79,21 +79,39 @@ function addNode(type) {
 }
 
 function logSession() { byId("session-log").textContent = JSON.stringify(session, null, 2); }
-function speak(text) { if(byId("voice").checked)speech.speak(text,{backend:byId("speech-backend").value}).catch(e=>byId("speech-status").textContent=e.message); }
+function speak(text,motion=null,manual='idle') {
+  if(!byId('voice').checked){motion?.playSilent();return;}
+  speech.speak(text,{backend:byId('speech-backend').value,
+    onStart:()=>{if(motion)motion.onStart();else stage.gesture(manual);},
+    onProgress:clock=>motion?.onProgress(clock),
+    onEnd:()=>{motion?.onEnd();stage.clearMotion();stage.gesture('idle');}
+  }).catch(error=>{byId('speech-status').textContent=`${error.message}. Playing motion without speech.`;motion?.playSilent();});
+}
 
-function showCurrent() {
-  if (!session?.currentId) { session.complete = true; speech.cancel();stage.gesture("idle");clip=null; byId("speech").textContent = "Flow complete."; byId("advance").disabled = true; byId("feedback-form").hidden = true; logSession(); return; }
+async function showCurrent() {
+  const generation=++showGeneration;speech.cancel();activeMotion?.onEnd();activeMotion=null;stage.clearMotion();stage.gesture("idle");
+  if (!session?.currentId) { session.complete = true; byId("speech").textContent = "Flow complete."; byId("advance").disabled = true; byId("feedback-form").hidden = true; logSession(); return; }
   const node = flow.nodes.find((item) => item.id === session.currentId);
   if (!node) return;
+  const automatic=!node.gesture||node.gesture==='auto';
   const match=retrieveGesture(node.text,gestureMap);
-  const selected=!node.gesture||node.gesture==='auto'?match.gesture:node.gesture;
-  const events = behaviorEvents(node.text, selected);
-  session.events.push({type:"gesture_retrieval",...match,nodeId:node.id});
-  clip=(!node.gesture||node.gesture==='auto')&&match.frames?match:null;clipStarted=performance.now();
-  if(!clip){stage.clearMotion();stage.showAvatar();stage.gesture(selected);}
+  let prepared=null;
+  if(automatic){
+    try{prepared=await prepareApplicationMotion(stage,node.text,{mode:'automatic'});}
+    catch(error){byId('speech-status').textContent=`Recorded co-speech unavailable: ${error.message}`;}
+    if(generation!==showGeneration)return;
+  }
+  const selected=automatic?'recorded_co_speech':node.gesture;
+  const events=behaviorEvents(node.text,selected);
+  session.events.push({type:'gesture_retrieval',nodeId:node.id,
+    route:prepared?.data?.trace?.routes?.join(', ')||(automatic?'recorded-library-unavailable':'manual-node-gesture'),
+    sequence:(prepared?.data?.slots||[]).map(slot=>slot.gesture_id||slot.id),
+    exampleMapMatch:automatic?match.phrase:null});
+  activeMotion=prepared?.motion||null;
+  if(prepared)byId('speech-status').textContent=gestureSummary(prepared.data);
   session.events.push(...events.map((event) => ({ ...event, nodeId: node.id, emittedAt: new Date().toISOString() })));
   session.transcript.push({ speaker: "digital_human", text: node.text, nodeId: node.id });
-  byId("speech").textContent = node.text; byId("avatar").dataset.gesture = node.gesture || "open_hand"; speak(node.text);
+  byId("speech").textContent = node.text; byId("avatar").dataset.gesture = selected; speak(node.text,activeMotion,automatic?"idle":selected);
   const form = byId("feedback-form"); form.hidden = node.type !== "feedback"; byId("advance").disabled = node.type === "feedback";
   if (node.type === "feedback") renderFeedback(node); else byId("advance").onclick = () => { session.currentId = node.next || null; showCurrent(); };
   logSession();
@@ -112,9 +130,9 @@ byId("start-node").onchange = (event) => { flow.startId = event.target.value; };
 byId("validate").onclick = () => { const errors = validateFlow(flow); const box = byId("validation"); box.className = errors.length ? "" : "ok"; box.innerHTML = errors.length ? errors.map((e) => `• ${e}`).join("<br>") : "Flow is structurally valid."; };
 byId("run").onclick = () => { const errors = validateFlow(flow); if (errors.length) { byId("validate").click(); return; } session = createSession(flow); showCurrent(); };
 byId("export").onclick = () => { const blob = new Blob([JSON.stringify(flow, null, 2)], { type: "application/json" }); const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "flow-human.json" }); link.click(); URL.revokeObjectURL(link.href); };
-byId("import").onchange = async (event) => { try { const candidate=JSON.parse(await event.target.files[0].text());const errors=validateFlow(candidate);if(errors.length)throw new Error(errors.join('; '));flow=candidate;session=null;speech.cancel();clip=null;render(); }catch(error){byId("validation").textContent=error.message;} };
+byId("import").onchange = async (event) => { try { const candidate=JSON.parse(await event.target.files[0].text());const errors=validateFlow(candidate);if(errors.length)throw new Error(errors.join('; '));flow=candidate;session=null;speech.cancel();activeMotion?.onEnd();activeMotion=null;stage.clearMotion();render(); }catch(error){byId("validation").textContent=error.message;} };
 render();
 
-byId("gesture-map").onchange=async e=>{try{gestureMap=validateMap(JSON.parse(await e.target.files[0].text()));byId("speech-status").textContent=`Loaded ${gestureMap.rules.length} gesture rules.`;}catch(error){byId("speech-status").textContent=error.message;}};
+byId("gesture-map").onchange=async e=>{try{gestureMap=validateMap(JSON.parse(await e.target.files[0].text()));byId("speech-status").textContent=`Loaded ${gestureMap.rules.length} example rules; prepared BEAT clips drive automatic playback.`;}catch(error){byId("speech-status").textContent=error.message;}};
 byId("audio-file").onchange=async e=>{try{const result=await speech.transcribe(e.target.files[0]);const input=byId("feedback-fields").querySelector("input,textarea");if(input)input.value=result.text;byId("speech-status").textContent=result.text;}catch(error){byId("speech-status").textContent=error.message;}};
 window.addEventListener("pagehide",()=>{speech.cancel();stage.dispose();});

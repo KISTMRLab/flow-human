@@ -9,3 +9,7 @@ dist/
 static/vendor/
 models/
 data/
+
+__pycache__/
+
+*.pt

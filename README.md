@@ -64,7 +64,7 @@ python -m pip install -r scripts/requirements-demo.txt
 python scripts/start_demo.py
 ```
 
-Open **http://127.0.0.1:8080/**. Click **Run flow**, then **Next** or **Continue** to follow the bundled dialogue and feedback branches. The launcher prepares pinned Three.js modules and downloads one small official BEAT BVH/TextGrid sample on first run. It builds a nine-clip local bank and fits the Automatic Text-to-Gesture rule-map adapter under ignored `outputs/beat-library/`; later runs reuse the cache. The first run needs internet access. Original recordings, large datasets, institute assets, and pretrained gesture weights are not distributed.
+Open **http://127.0.0.1:8080/**. Click **Run flow**, then **Next** or **Continue** to follow the bundled dialogue and feedback branches. Weighted answers accumulate into session variables that later branches test, and **Answers JSON** / **Answers CSV** export the collected feedback. The launcher prepares pinned Three.js modules and downloads one small official BEAT BVH/TextGrid sample on first run. It builds a nine-clip local bank and fits the Automatic Text-to-Gesture rule-map adapter under ignored `outputs/beat-library/`; later runs reuse the cache. The first run needs internet access. Original recordings, large datasets, institute assets, and pretrained gesture weights are not distributed.
 
 The 3D presentation uses shared Three.js avatar components and bundled fictional CC0 characters. The paper-specific algorithms and data adapters live in this repository.
 

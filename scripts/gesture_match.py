@@ -109,7 +109,36 @@ class GestureMatcher:
                 "floor": floor, "backend": self.backend}
 
 
+SBERT_ENV = ("FLOW_SBERT_MODEL", "BEAT_SBERT_MODEL", "SBERT_MODEL")
+SBERT_NAME = "all-MiniLM-L6-v2"
+MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
+
+
+def sbert_model_path(model_path: str | None = None) -> str | None:
+    """Local Sentence-BERT folder: --sbert-model, FLOW_SBERT_MODEL, BEAT_SBERT_MODEL, SBERT_MODEL or
+    ``models/all-MiniLM-L6-v2`` -- the same settings the BEAT retrieval reads, so the rule-map label names
+    the encoder that is actually used."""
+    if model_path:
+        return str(model_path)
+    for name in SBERT_ENV:
+        if os.environ.get(name):
+            return os.environ[name]
+    local = MODELS_DIR / SBERT_NAME
+    return str(local) if local.is_dir() else None
+
+
 def matcher_from_settings(model_path: str | None = None) -> GestureMatcher:
-    """--sbert-model or FLOW_SBERT_MODEL selects Sentence-BERT; otherwise TF-IDF."""
-    model_path = model_path or os.environ.get("FLOW_SBERT_MODEL")
-    return GestureMatcher(SbertEncoder(model_path) if model_path else None)
+    """Sentence-BERT from ``sbert_model_path``; otherwise TF-IDF.
+
+    An explicit --sbert-model must load; a model found only through the environment or ``models/`` that
+    cannot load (missing folder or sentence-transformers) falls back to TF-IDF, which the label reports.
+    """
+    path = sbert_model_path(model_path)
+    if not path:
+        return GestureMatcher(None)
+    try:
+        return GestureMatcher(SbertEncoder(path))
+    except (FileNotFoundError, ImportError, OSError):
+        if model_path:
+            raise
+        return GestureMatcher(None)

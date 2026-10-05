@@ -2,7 +2,8 @@
 
 Starts the demo server in-process, then checks the editor page, the BEAT route
 status, and rule-map matching with the bundled example map. Matching uses
-Sentence-BERT from --sbert-model (or FLOW_SBERT_MODEL), else TF-IDF.
+Sentence-BERT from --sbert-model (or FLOW_SBERT_MODEL, BEAT_SBERT_MODEL, SBERT_MODEL,
+models/all-MiniLM-L6-v2), else TF-IDF.
 The browser runtime (flows, branching, export) is covered by
 `node scripts/verify.mjs` and the JavaScript tests.
 """

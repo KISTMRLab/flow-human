@@ -53,10 +53,44 @@ def test_sentence_encoder_matches_synonyms_with_floor():
     assert matcher.match("nothing related", RULES)["gesture"] == "idle"
 
 
-def test_sbert_requires_a_local_model_folder(tmp_path):
+def test_sbert_requires_a_local_model_folder(tmp_path, monkeypatch):
+    import gesture_match
+    for name in gesture_match.SBERT_ENV:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(gesture_match, "MODELS_DIR", tmp_path / "models")
     with pytest.raises(FileNotFoundError):
         SbertEncoder(tmp_path / "missing")
     assert matcher_from_settings(None).backend == "tfidf"
+
+
+def test_rule_map_reads_the_same_sbert_settings_as_beat_retrieval(tmp_path, monkeypatch):
+    # Regression (V2 D3): with SBERT_MODEL/BEAT_SBERT_MODEL set the rule map said TF-IDF while BEAT used SBERT.
+    import gesture_match
+    for name in gesture_match.SBERT_ENV:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(gesture_match, "MODELS_DIR", tmp_path / "models")
+    assert gesture_match.sbert_model_path() is None
+    loaded = []
+    monkeypatch.setattr(gesture_match, "SbertEncoder", lambda path: loaded.append(str(path)) or StubEncoder())
+    for name in ("SBERT_MODEL", "BEAT_SBERT_MODEL", "FLOW_SBERT_MODEL"):  # each overrides the one before
+        monkeypatch.setenv(name, str(tmp_path / name))
+        assert matcher_from_settings().backend == "sbert" and loaded[-1] == str(tmp_path / name)
+    for name in gesture_match.SBERT_ENV:
+        monkeypatch.delenv(name)
+    (tmp_path / "models" / "all-MiniLM-L6-v2").mkdir(parents=True)
+    assert matcher_from_settings().backend == "sbert" and loaded[-1].endswith("all-MiniLM-L6-v2")
+    assert matcher_from_settings(str(tmp_path / "explicit")).backend == "sbert" and loaded[-1].endswith("explicit")
+
+
+def test_unloadable_environment_model_falls_back_to_tfidf_but_explicit_model_fails(tmp_path, monkeypatch):
+    import gesture_match
+    for name in gesture_match.SBERT_ENV:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(gesture_match, "MODELS_DIR", tmp_path / "models")
+    monkeypatch.setenv("SBERT_MODEL", str(tmp_path / "missing"))
+    assert matcher_from_settings().backend == "tfidf"
+    with pytest.raises(FileNotFoundError):
+        matcher_from_settings(str(tmp_path / "missing"))
 
 
 def test_match_rejects_bad_requests():

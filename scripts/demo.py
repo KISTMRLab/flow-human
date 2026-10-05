@@ -50,7 +50,7 @@ def make_handler(matcher):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--port',type=int,default=8020)
-    parser.add_argument('--sbert-model',help='local sentence-transformers folder for gesture-rule matching (env FLOW_SBERT_MODEL); TF-IDF otherwise')
+    parser.add_argument('--sbert-model',help='local sentence-transformers folder for gesture-rule matching (env FLOW_SBERT_MODEL, BEAT_SBERT_MODEL or SBERT_MODEL, or models/all-MiniLM-L6-v2); TF-IDF otherwise')
     args=parser.parse_args();matcher=matcher_from_settings(args.sbert_model)
     print(f'Flow Human: http://127.0.0.1:{args.port} (gesture matching: {matcher.backend})',flush=True)
     ThreadingHTTPServer(('127.0.0.1',args.port),make_handler(matcher)).serve_forever()

@@ -158,8 +158,8 @@ Flow Human explicitly modifies the [Automatic Text-to-Gesture](https://github.co
 `frames` (`[frame][joint][x,y,z]` positions named by `jointNames`), `fps`, `floor` and `vectors` are optional. Importing a map under **Import rule map** switches **Automatic gestures** to the map.
 
 - **Matching.** A map that supplies its own word `vectors` matches in the browser by summed-vector cosine. Otherwise the server matches each dialogue line.
-  - **Sentence-BERT**, as in the paper, needs a locally saved sentence-transformers model: `pip install sentence-transformers`, then `python scripts/demo.py --sbert-model path/to/all-MiniLM-L6-v2` or set `FLOW_SBERT_MODEL`. The model loads offline from that folder and is never downloaded implicitly. To fetch one once, run `SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2").save("models/all-MiniLM-L6-v2")`; `models/` is git-ignored.
-  - **TF-IDF** over the rule phrases is used when no model is configured.
+  - **Sentence-BERT**, as in the paper, needs a locally saved sentence-transformers model: `pip install sentence-transformers`, then `python scripts/demo.py --sbert-model path/to/all-MiniLM-L6-v2` or set `FLOW_SBERT_MODEL`. The rule map also reads `BEAT_SBERT_MODEL`, `SBERT_MODEL` and `models/all-MiniLM-L6-v2`, the settings the recorded BEAT route uses, so both use the same encoder. The model loads offline from that folder and is never downloaded implicitly. To fetch one once, run `SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2").save("models/all-MiniLM-L6-v2")`; `models/` is git-ignored.
+  - **TF-IDF** over the rule phrases is used when no model is configured, or when a model named only by an environment variable cannot load. The **Rule map** option names the encoder in use.
 - **Similarity floor.** Scores below the floor return `idle`, not the nearest rule. Defaults: SBERT 0.45, TF-IDF 0.2, browser word vectors 0.5, browser lexical fallback 0.15.
 - **Playback.** A matched rule with `frames` plays those frames on the avatar at its `fps`. A matched rule without frames plays its named pose.
 

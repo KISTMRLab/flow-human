@@ -1,5 +1,5 @@
-import {createStage} from "./static/avatar.js";
-import {Speech} from "./static/speech.js";
+import {createStage} from "./static/avatar.js?v=20261005-gesture7";
+import {Speech} from "./static/speech.js?v=20261005-gesture7";
 import {exampleMap,retrieveGesture,validateMap} from "./gesture-map.js";
 import { behaviorEvents, createSession, evaluateBranch, validateFlow } from "./core.js";
 
@@ -12,7 +12,7 @@ const canvas = byId("canvas");
 const edges = byId("edges");
 const stage=createStage(byId("three-stage")),speech=new Speech(stage);
 let gestureMap=structuredClone(exampleMap),clip=null,clipStarted=0;
-function playback(t){if(clip?.frames?.length){const frame=clip.frames[Math.floor((t-clipStarted)/1000*clip.fps)%clip.frames.length];stage.setSkeleton(frame,clip.edges);}requestAnimationFrame(playback);}requestAnimationFrame(playback);
+function playback(t){if(clip?.frames?.length){const frame=clip.frames[Math.floor((t-clipStarted)/1000*clip.fps)%clip.frames.length];if(stage.setPosePositions(frame,clip.jointNames,stage.avatar,{axisSigns:clip.axisSigns})){stage.showAvatar();}else stage.setSkeleton(frame,clip.edges);}requestAnimationFrame(playback);}requestAnimationFrame(playback);
 
 function nodeOptions(selected = "") {
   return `<option value="">End flow</option>${flow.nodes.map((n) => `<option value="${n.id}" ${n.id === selected ? "selected" : ""}>${n.id}</option>`).join("")}`;
@@ -90,7 +90,7 @@ function showCurrent() {
   const events = behaviorEvents(node.text, selected);
   session.events.push({type:"gesture_retrieval",...match,nodeId:node.id});
   clip=(!node.gesture||node.gesture==='auto')&&match.frames?match:null;clipStarted=performance.now();
-  if(!clip){stage.showAvatar();stage.gesture(selected);}
+  if(!clip){stage.clearMotion();stage.showAvatar();stage.gesture(selected);}
   session.events.push(...events.map((event) => ({ ...event, nodeId: node.id, emittedAt: new Date().toISOString() })));
   session.transcript.push({ speaker: "digital_human", text: node.text, nodeId: node.id });
   byId("speech").textContent = node.text; byId("avatar").dataset.gesture = node.gesture || "open_hand"; speak(node.text);

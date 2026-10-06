@@ -53,6 +53,27 @@ def test_sentence_encoder_matches_synonyms_with_floor():
     assert matcher.match("nothing related", RULES)["gesture"] == "idle"
 
 
+def test_sbert_text_without_a_vocabulary_word_idles_before_the_floor():
+    """MiniLM gives gibberish a vector that scores about 0.26 against keyword rules; it must still idle."""
+    tokenizer = type("Tok", (), {"get_vocab": lambda self: {"welcome": 1, "look": 2, "the": 3}})()
+    encoder = SbertEncoder.__new__(SbertEncoder)
+    encoder.model = type("Model", (), {"tokenizer": tokenizer})()
+    assert encoder.in_vocabulary("Welcome everyone") and not encoder.in_vocabulary("zzzz qqqq the")
+
+    class Gibberish(StubEncoder):
+        def encode(self, texts):
+            return [[1.0, 0.0, 0.0, 0.0] for _ in texts]  # every text looks like "welcome"
+
+        def in_vocabulary(self, text):
+            return "zzzz" not in text
+
+    matcher = GestureMatcher(Gibberish())
+    assert matcher.match("welcome", RULES)["gesture"] == "welcome"
+    miss = matcher.match("zzzz qqqq", RULES)
+    assert miss["gesture"] == "idle" and miss["reason"] == "no content word in the model vocabulary"
+    assert miss["floor"] == 0.25
+
+
 def test_sbert_requires_a_local_model_folder(tmp_path, monkeypatch):
     import gesture_match
     for name in gesture_match.SBERT_ENV:

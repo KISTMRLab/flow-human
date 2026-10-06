@@ -15,7 +15,9 @@ from pathlib import Path
 
 TOKEN = re.compile(r"[^\W_]+", re.UNICODE)
 STOPWORDS = frozenset("a an and are as at be but by for from i if in into is it its me my of on or our so that the their this to us was we were will with you your".split())
-DEFAULT_FLOOR = {"sbert": 0.45, "tfidf": 0.2}
+# all-MiniLM-L6-v2 against the keyword-style rule phrases of a rule map: on-topic lines score 0.28-0.82,
+# unrelated lines 0.10-0.13 (gibberish is caught by the vocabulary check, not the floor).
+DEFAULT_FLOOR = {"sbert": 0.25, "tfidf": 0.2}
 
 
 def tokens(text: str) -> list[str]:
@@ -73,6 +75,19 @@ class SbertEncoder:
     def encode(self, texts: list[str]) -> list[list[float]]:
         return [list(map(float, row)) for row in self.model.encode(list(texts), normalize_embeddings=True)]
 
+    def in_vocabulary(self, text: str) -> bool:
+        """A content word of ``text`` is a whole word of the model's tokenizer vocabulary.
+
+        Gibberish still gets a Sentence-BERT vector (and a cosine near 0.26 against keyword rules), so text
+        without any known content word goes idle before the similarity floor is applied.
+        """
+        tokenizer = getattr(self.model, "tokenizer", None)
+        getter = getattr(tokenizer, "get_vocab", None)
+        vocab = getter() if callable(getter) else getattr(tokenizer, "vocab", None)
+        if not vocab:
+            return True
+        return any(token in vocab for token in tokens(text) if len(token) > 1 or token.isdigit())
+
 
 class GestureMatcher:
     def __init__(self, encoder=None):
@@ -103,10 +118,14 @@ class GestureMatcher:
         scores = [cosine(query, row) for row in embeddings]
         best = max(range(len(scores)), key=scores.__getitem__)
         floor = DEFAULT_FLOOR.get(self.backend, 0.3) if floor is None else float(floor)
-        matched = scores[best] >= floor and scores[best] > 0
-        return {"index": best if matched else None, "matched": matched, "score": round(scores[best], 4),
-                "gesture": rules[best].get("gesture") if matched else "idle", "phrase": phrases[best] if matched else None,
-                "floor": floor, "backend": self.backend}
+        known = getattr(encoder, "in_vocabulary", lambda _: True)(text)
+        matched = known and scores[best] >= floor and scores[best] > 0
+        result = {"index": best if matched else None, "matched": matched, "score": round(scores[best], 4),
+                  "gesture": rules[best].get("gesture") if matched else "idle", "phrase": phrases[best] if matched else None,
+                  "floor": floor, "backend": self.backend}
+        if not known:
+            result["reason"] = "no content word in the model vocabulary"
+        return result
 
 
 SBERT_ENV = ("FLOW_SBERT_MODEL", "BEAT_SBERT_MODEL", "SBERT_MODEL")
